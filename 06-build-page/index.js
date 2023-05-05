@@ -19,13 +19,13 @@ fs.mkdir(assets, { recursive: true }, err => {
 //создание пустого файла index.html
 fs.writeFile(indexhHtml, '', (err) => { 
   if (err) throw err;
-  console.log('The index.html has been created!');
+  // console.log('The index.html has been created!');
 });
 
 //создание пустого файла style.css
 fs.writeFile(styleCss, '', (err) => { 
   if (err) throw err;
-  console.log('The style.css has been created!');
+  // console.log('The style.css has been created!');
 }); 
 
 //копирование содержимого папки
@@ -66,4 +66,43 @@ async function copyDir () {
 }
 copyDir();
 
+//наполнение index.html компонентами
+async function writeHtml() {
+  try {
+    //считывание контента файла
+    let templateHtml = await fsPromises.readFile(`${__dirname}/template.html`);
+    //считывание содержимого папки
+    let componentsHtml = await fsPromises.readdir(`${__dirname}/components`, {withFileTypes: true});
+    let htmlTxt = templateHtml.toString();
+    let currentPart = '';
+
+    // замена шаблонных тегов содержимым html компонент
+    for (const component of componentsHtml) {
+      if (component.isFile() && path.extname(component.name) === '.html') {
+        currentPart = await fsPromises.readFile(`${__dirname}/components/${component.name}`);
+        htmlTxt = htmlTxt.replace(`{{${component.name.slice(0, -5)}}}`, currentPart.toString()); 
+      }
+    }
+
+    //запись файла index
+    fsPromises.writeFile(`${__dirname}/project-dist/index.html`, htmlTxt);
+  }  catch(err) {
+    console.log((err)); 
+  }
+}
+writeHtml();
+
+
+//сбор стилей из файлов из папки styles
+fs.readdir('06-build-page/styles', {withFileTypes: true}, function(_err, files) { //считывание содержимого каталога
+  for (let i = 0; i < files.length; i++) {
+    if (files[i].isFile() === true && path.extname(files[i].name) == '.css') { //условие на существование файла с расширением css
+      fs.readFile(`06-build-page/styles/${files[i].name}`, 'utf-8', (_err, data) => { //считывание содержимого файла
+        fs.appendFile(styleCss, data, err => { //добавление данных в общий файл стилей
+            if (err) throw err;
+        });
+      });
+    }
+  }
+});
 
